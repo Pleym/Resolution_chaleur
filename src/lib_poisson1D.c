@@ -88,13 +88,49 @@ int indexABCol(int i, int j, int *lab) {
     return 0;
 }
 
-int dgbtrftridiag(int *la, int*n, int *kl, int *ku, double *AB, int *lab, int *ipiv, int *info) {
-  for (int i = 1; i < *la; ++i) {
-    int a_1 = (*lab) * (i - 1) + 1;
-    int b_1 = (*lab) * (i - 1) + 2;
-		int c_1 = (*lab) * (i);
-    int a = (*lab) * (i) + 1;
-    ipiv[i - 1] = i;
-  }
+int dgbtrftridiag(int *la, int *n, int *kl, int *ku, double *AB, int *lab, int *ipiv, int *info) {
+    // Vérification des conditions pour une matrice tridiag
+    if (*lab != 4 || *kl != 1 || *ku != 1 || *la < *n) {
+        *info = -1;
+        return *info;
+    }
+    
+    *info = 0;
+    
+    // Factorisation LU pour matrice tridiagonale
+    for (int k = 0; k < *n - 1; k++) {
+        double diag = fabs(AB[indexABCol(k, k, lab)]);
+        double subdiag = fabs(AB[indexABCol(k + 1, k, lab)]);
+        
+        if (subdiag > diag) {
+            // Échange des lignes k et k+1
+            for (int j = k; j <= (k + 2 < *n ? k + 2 : *n - 1); j++) {
+                double temp = AB[indexABCol(k, j, lab)];
+                AB[indexABCol(k, j, lab)] = AB[indexABCol(k + 1, j, lab)];
+                AB[indexABCol(k + 1, j, lab)] = temp;
+            }
+            ipiv[k] = k + 2;  
+        } else {
+            ipiv[k] = k + 1;  
+        }
+        
+        // Vérification pivot nul
+        if (AB[indexABCol(k, k, lab)] == 0.0) {
+            *info = k + 1;
+            return *info;
+        }
+        
+        // Élimination de Gauss
+        double multiplier = AB[indexABCol(k + 1, k, lab)] / AB[indexABCol(k, k, lab)];
+        AB[indexABCol(k + 1, k, lab)] = multiplier;  // Stockage du multiplicateur dans L
+        AB[indexABCol(k + 1, k + 1, lab)] -= multiplier * AB[indexABCol(k, k + 1, lab)];
+    }
+    
+    // Dernier pivot
+    ipiv[*n - 1] = *n;
+    if (AB[indexABCol(*n - 1, *n - 1, lab)] == 0.0) {
+        *info = *n;
+    }
+    
     return *info;
 }
