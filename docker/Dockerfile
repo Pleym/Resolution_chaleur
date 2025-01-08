@@ -1,15 +1,14 @@
 FROM ubuntu:20.04
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Paris
+
 RUN apt-get update -y && \
-  apt-get install -y gcc libblas-dev liblapacke-dev make vim
+    apt-get install -y gcc libblas-dev liblapacke-dev liblapack-dev make vim gnuplot tzdata && \
+    ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata
 
 WORKDIR /app
-COPY ../src /app/src
-COPY ../include /app/include
-COPY ../Makefile /app/
-COPY ../docker.mk /app/
+COPY . .
 
 ENV HOSTNAME=docker
-RUN mkdir -p bin && \
-    ls -la && \
-    make
