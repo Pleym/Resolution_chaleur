@@ -6,22 +6,33 @@
 #include "lib_poisson1D.h"
 
 void set_GB_operator_colMajor_poisson1D(double* AB, int *lab, int *la, int *kv){
-  int ii, jj, kk;
-  for (jj=0;jj<(*la);jj++){
-    kk = jj*(*lab);
-    if (*kv>=0){
-      for (ii=0;ii< *kv;ii++){
-	AB[kk+ii]=0.0;
-      }
+    // Pour une matrice tridiagonale en format bande colonne majeure :
+    // - la diagonale principale est stockée dans la ligne kl+ku
+    // - la sous-diagonale est stockée dans la ligne kl+ku-1
+    // - la sur-diagonale est stockée dans la ligne kl+ku+1
+    int i, j;
+    int kl = 1;  // nombre de sous-diagonales
+    int ku = 1;  // nombre de sur-diagonales
+    
+    // Initialisation à zéro
+    for(i = 0; i < *lab * (*la); i++){
+        AB[i] = 0.0;
     }
-    AB[kk+ *kv]=-1.0;
-    AB[kk+ *kv+1]=2.0;
-    AB[kk+ *kv+2]=-1.0;
-  }
-  AB[0]=0.0;
-  if (*kv == 1) {AB[1]=0;}
-  
-  AB[(*lab)*(*la)-1]=0.0;
+    
+    // Remplissage de la diagonale principale (2.0)
+    for(i = 0; i < *la; i++){
+        AB[(*kv+1) + i*(*lab)] = 2.0;
+    }
+    
+    // Remplissage de la sous-diagonale (-1.0)
+    for(i = 1; i < *la; i++){
+        AB[*kv + i*(*lab)] = -1.0;
+    }
+    
+    // Remplissage de la sur-diagonale (-1.0)
+    for(i = 0; i < *la-1; i++){
+        AB[(*kv+2) + i*(*lab)] = -1.0;
+    }
 }
 
 void set_GB_operator_colMajor_poisson1D_Id(double* AB, int *lab, int *la, int *kv){
@@ -69,11 +80,13 @@ void set_grid_points_1D(double* x, int* la){
 }
 
 double relative_forward_error(double* x, double* y, int* la){
-  return 0;
+	double norme_x = sqrt(cblas_ddot(*la, x, 1, x, 1));
+	cblas_daxpy(*la, -1, y, 1, x, 1);
+	double res_norme = sqrt(cblas_ddot(*la, x, 1, x, 1));
+	return res_norme / norme_x;
 }
-
 int indexABCol(int i, int j, int *lab){
-  return j*(*lab)+i;
+  return (j + 1) * (*lab - 1) + i - 1;
 }
 
 int dgbtrftridiag(int *la, int*n, int *kl, int *ku, double *AB, int *lab, int *ipiv, int *info){

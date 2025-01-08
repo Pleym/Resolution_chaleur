@@ -95,4 +95,58 @@ void write_xy(double* vec, double* x, int* la, char* filename){
   else{
     perror(filename);
   } 
-}  
+}
+
+void plot_richardson_convergence(double* error_vec, int nb_iter, char* method_name) {
+    char data_filename[256];
+    snprintf(data_filename, sizeof(data_filename), "richardson_%s_data.dat", method_name);
+    
+    // Écriture des données
+    FILE* data_file = fopen(data_filename, "w");
+    if (!data_file) {
+        perror("Erreur lors de l'ouverture du fichier de données");
+        return;
+    }
+    
+    for (int i = 0; i < nb_iter; i++) {
+        fprintf(data_file, "%d %.10e\n", i, error_vec[i]);
+    }
+    fclose(data_file);
+    
+    // Création du script gnuplot
+    char script_filename[256];
+    snprintf(script_filename, sizeof(script_filename), "richardson_%s.gnuplot", method_name);
+    
+    FILE* script_file = fopen(script_filename, "w");
+    if (!script_file) {
+        perror("Erreur lors de l'ouverture du fichier script");
+        return;
+    }
+
+    fprintf(script_file, 
+        "set terminal png size 1200,800\n"
+        "set output 'richardson_%s.png'\n"
+        "set title 'Convergence de la methode de Richardson'\n"
+        "set xlabel 'Iterations'\n"
+        "set ylabel 'Erreur Avant'\n"
+        "set grid\n"
+        "set format y '%%g'\n"
+        "plot '%s' using 1:2 with linespoints title 'Erreur'\n",
+        method_name, data_filename);
+    
+    fclose(script_file);
+    
+    // Exécution de gnuplot
+    char command[512];
+    snprintf(command, sizeof(command), "gnuplot %s", script_filename);
+    int res = system(command);
+    if (res) {
+        perror("Erreur lors de l'exécution de gnuplot");
+    } else {
+        printf("Graphique généré : richardson_%s.png\n", method_name);
+    }
+    
+    // Nettoyage
+    remove(data_filename);
+    remove(script_filename);
+}
